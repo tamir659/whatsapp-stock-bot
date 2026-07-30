@@ -1,0 +1,13 @@
+name = "whatsapp-stock-bot"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# Checks stock prices every 10 minutes.
+[triggers]
+crons = ["*/10 * * * *"]
+
+# After running `wrangler d1 create watchlist-db`, paste the database_id it prints below.
+[[d1_databases]]
+binding = "DB"
+database_name = "watchlist-db"
+database_id = "618abca1-77b8-4429-b33d-75ae8ad00ac0"

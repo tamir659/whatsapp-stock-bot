@@ -1,0 +1,67 @@
+import type { Env } from "./config";
+import { extractMessages, type InboundWebhookPayload } from "./whatsapp/types";
+import { sendText } from "./whatsapp/send";
+import { parseCommand } from "./commands/parser";
+import { handleAdd } from "./commands/add";
+import { handleRemove } from "./commands/remove";
+import { handleList } from "./commands/list";
+
+const HELP_TEXT = [
+  "Commands:",
+  "add TICKER PRICE — e.g. add AAPL 220",
+  "add TICKER above|below PRICE",
+  "add TICKER near PRICE PCT% — e.g. add AAPL near 220 2%",
+  "remove TICKER",
+  "list",
+].join("\n");
+
+// Meta calls this once when you save the webhook URL in the WhatsApp Configuration page.
+function handleVerification(request: Request, env: Env): Response {
+  const url = new URL(request.url);
+  const mode = url.searchParams.get("hub.mode");
+  const token = url.searchParams.get("hub.verify_token");
+  const challenge = url.searchParams.get("hub.challenge");
+
+  if (mode === "subscribe" && token === env.WHATSAPP_VERIFY_TOKEN && challenge) {
+    return new Response(challenge, { status: 200 });
+  }
+  return new Response("Forbidden", { status: 403 });
+}
+
+async function handleIncomingMessages(request: Request, env: Env): Promise<Response> {
+  const payload = (await request.json()) as InboundWebhookPayload;
+  const messages = extractMessages(payload);
+
+  for (const msg of messages) {
+    const cmd = parseCommand(msg.text);
+    let reply: string;
+
+    switch (cmd.action) {
+      case "add":
+        reply = await handleAdd(env, cmd, msg.from);
+        break;
+      case "remove":
+        reply = await handleRemove(env, cmd, msg.from);
+        break;
+      case "list":
+        reply = await handleList(env, msg.from);
+        break;
+      case "help":
+        reply = HELP_TEXT;
+        break;
+      default:
+        reply = `Sorry, I didn't understand that.\n\n${HELP_TEXT}`;
+    }
+
+    await sendText(env, msg.from, reply);
+  }
+
+  // Always 200 quickly — Meta retries with backoff if it doesn't get one.
+  return new Response("OK", { status: 200 });
+}
+
+export async function handleWebhookRequest(request: Request, env: Env): Promise<Response> {
+  if (request.method === "GET") return handleVerification(request, env);
+  if (request.method === "POST") return handleIncomingMessages(request, env);
+  return new Response("Method Not Allowed", { status: 405 });
+}
