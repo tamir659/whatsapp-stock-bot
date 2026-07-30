@@ -1,6 +1,7 @@
 import type { Env } from "./config";
 import { extractMessages, type InboundWebhookPayload } from "./whatsapp/types";
 import { sendText } from "./whatsapp/send";
+import { verifySignature } from "./whatsapp/verify";
 import { parseCommand } from "./commands/parser";
 import { handleAdd } from "./commands/add";
 import { handleRemove } from "./commands/remove";
@@ -29,7 +30,14 @@ function handleVerification(request: Request, env: Env): Response {
 }
 
 async function handleIncomingMessages(request: Request, env: Env): Promise<Response> {
-  const payload = (await request.json()) as InboundWebhookPayload;
+  const rawBody = await request.text();
+  const signature = request.headers.get("X-Hub-Signature-256");
+  const isValid = await verifySignature(rawBody, signature, env.WHATSAPP_APP_SECRET);
+  if (!isValid) {
+    return new Response("Invalid signature", { status: 401 });
+  }
+
+  const payload = JSON.parse(rawBody) as InboundWebhookPayload;
   const messages = extractMessages(payload);
 
   for (const msg of messages) {
