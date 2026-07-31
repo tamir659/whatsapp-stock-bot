@@ -2,6 +2,7 @@ import type { Env } from "./config";
 import { listActiveRows, markAlerted, type WatchlistRow } from "./db/watchlist";
 import { recordCronRun } from "./db/status";
 import { getQuotes } from "./stocks/finnhub";
+import { isMarketOpen } from "./stocks/market-hours";
 import { sendPriceAlertTemplate } from "./whatsapp/send";
 
 function isTriggered(row: WatchlistRow, price: number): boolean {
@@ -46,6 +47,11 @@ async function runPriceCheck(env: Env): Promise<{ tickersChecked: number; alerts
 }
 
 export async function checkPrices(env: Env): Promise<void> {
+  if (!isMarketOpen()) {
+    await recordCronRun(env, "ok", "skipped — market closed", 0, 0);
+    return;
+  }
+
   try {
     const { tickersChecked, alertsSent } = await runPriceCheck(env);
     await recordCronRun(env, "ok", `checked ${tickersChecked}, alerted ${alertsSent}`, tickersChecked, alertsSent);
