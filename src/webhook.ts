@@ -7,6 +7,7 @@ import { parseCommand } from "./commands/parser";
 import { handleAdd } from "./commands/add";
 import { handleRemove } from "./commands/remove";
 import { handleList } from "./commands/list";
+import { handlePrices } from "./commands/prices";
 import { runAgent } from "./agent/loop";
 import { appendTurn, getRecentTurns, trimHistory } from "./db/conversation";
 
@@ -17,6 +18,7 @@ const HELP_TEXT = [
   "add TICKER near PRICE PCT% — e.g. add AAPL near 220 2%",
   "remove TICKER",
   "list",
+  "prices — current live prices for your watchlist",
 ].join("\n");
 
 // Meta calls this once when you save the webhook URL in the WhatsApp Configuration page.
@@ -56,6 +58,9 @@ async function handleIncomingMessages(request: Request, env: Env): Promise<Respo
         break;
       case "list":
         reply = await handleList(env, msg.from);
+        break;
+      case "prices":
+        reply = await handlePrices(env, msg.from);
         break;
       case "help":
         reply = HELP_TEXT;

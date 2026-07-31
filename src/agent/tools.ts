@@ -1,6 +1,7 @@
 import type { Env } from "../config";
 import { addRow, listRows, removeRow, type Condition } from "../db/watchlist";
 import { getQuote, getQuotes } from "../stocks/finnhub";
+import { handlePrices } from "../commands/prices";
 import type { ToolDefinition } from "./types";
 
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
@@ -53,6 +54,12 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["ticker"],
     },
   },
+  {
+    name: "get_watchlist_prices",
+    description:
+      "Get the current live price of every stock on the user's watchlist, alongside its target. Use this for things like 'how are my stocks doing?'",
+    input_schema: { type: "object", properties: {} },
+  },
 ];
 
 export async function runTool(
@@ -95,6 +102,8 @@ export async function runTool(
       const [quote] = await getQuotes(env, [ticker]);
       return quote ? `${ticker} is currently at ${quote.price}.` : `Couldn't get a price for ${ticker}.`;
     }
+    case "get_watchlist_prices":
+      return handlePrices(env, phoneNumber);
     default:
       return `Unknown tool: ${name}`;
   }
