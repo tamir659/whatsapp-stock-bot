@@ -1,4 +1,5 @@
 import type { Env } from "./config";
+import { AGENT_HISTORY_TURN_LIMIT } from "./config";
 import { extractMessages, type InboundWebhookPayload } from "./whatsapp/types";
 import { sendText } from "./whatsapp/send";
 import { verifySignature } from "./whatsapp/verify";
@@ -6,6 +7,8 @@ import { parseCommand } from "./commands/parser";
 import { handleAdd } from "./commands/add";
 import { handleRemove } from "./commands/remove";
 import { handleList } from "./commands/list";
+import { runAgent } from "./agent/loop";
+import { appendTurn, getRecentTurns, trimHistory } from "./db/conversation";
 
 const HELP_TEXT = [
   "Commands:",
@@ -57,8 +60,19 @@ async function handleIncomingMessages(request: Request, env: Env): Promise<Respo
       case "help":
         reply = HELP_TEXT;
         break;
-      default:
-        reply = `Sorry, I didn't understand that.\n\n${HELP_TEXT}`;
+      default: {
+        try {
+          const history = await getRecentTurns(env, msg.from, AGENT_HISTORY_TURN_LIMIT);
+          reply = await runAgent(env, msg.from, history, msg.text);
+          await appendTurn(env, msg.from, "user", msg.text);
+          await appendTurn(env, msg.from, "assistant", reply);
+          await trimHistory(env, msg.from, AGENT_HISTORY_TURN_LIMIT);
+        } catch {
+          // Agent unavailable (e.g. Anthropic API/key issue) — fail soft instead of
+          // dropping the reply entirely.
+          reply = `Sorry, I didn't understand that.\n\n${HELP_TEXT}`;
+        }
+      }
     }
 
     await sendText(env, msg.from, reply);

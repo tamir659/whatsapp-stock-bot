@@ -9,7 +9,7 @@ interface FinnhubQuoteResponse {
   c: number; // current price
 }
 
-async function getQuote(env: Env, ticker: string): Promise<Quote | null> {
+export async function getQuote(env: Env, ticker: string): Promise<Quote | null> {
   const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${env.FINNHUB_KEY}`;
   const res = await fetch(url);
   if (!res.ok) return null;

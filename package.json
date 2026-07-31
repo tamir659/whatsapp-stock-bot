@@ -10,7 +10,9 @@
     "db:migrate2:local": "wrangler d1 execute watchlist-db --local --file=migrations/0002_per_user_lists.sql",
     "db:migrate2:remote": "wrangler d1 execute watchlist-db --remote --file=migrations/0002_per_user_lists.sql",
     "db:migrate3:local": "wrangler d1 execute watchlist-db --local --file=migrations/0003_cron_status.sql",
-    "db:migrate3:remote": "wrangler d1 execute watchlist-db --remote --file=migrations/0003_cron_status.sql"
+    "db:migrate3:remote": "wrangler d1 execute watchlist-db --remote --file=migrations/0003_cron_status.sql",
+    "db:migrate4:local": "wrangler d1 execute watchlist-db --local --file=migrations/0004_conversation_history.sql",
+    "db:migrate4:remote": "wrangler d1 execute watchlist-db --remote --file=migrations/0004_conversation_history.sql"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260722.1",
