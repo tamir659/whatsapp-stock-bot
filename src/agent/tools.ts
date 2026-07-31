@@ -1,6 +1,7 @@
 import type { Env } from "../config";
 import { addRow, listRows, removeRow, type Condition } from "../db/watchlist";
-import { getQuote, getQuotes } from "../stocks/finnhub";
+import { getQuotes } from "../stocks/finnhub";
+import { isKnownTicker } from "../db/tickers";
 import { handlePrices } from "../commands/prices";
 import type { ToolDefinition } from "./types";
 
@@ -71,9 +72,9 @@ export async function runTool(
   switch (name) {
     case "add_stock": {
       const ticker = String(input.ticker).toUpperCase();
-      const quote = await getQuote(env, ticker);
-      if (!quote) {
-        return `${ticker} doesn't look like a valid ticker — double-check the symbol.`;
+      const known = await isKnownTicker(env, ticker);
+      if (!known) {
+        return `${ticker} doesn't look like a real ticker — double-check the symbol.`;
       }
       const targetPrice = Number(input.target_price);
       const condition = (input.condition as Condition | undefined) ?? "above";
