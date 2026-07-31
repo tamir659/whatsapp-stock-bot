@@ -2,10 +2,11 @@ name = "whatsapp-stock-bot"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
-# Fires every 5 minutes; the code itself skips the actual work outside US market
-# hours (see src/stocks/market-hours.ts), so this is cheap the rest of the day.
+# Fires every minute (Cloudflare Cron Triggers' minimum interval); the code itself
+# skips the actual work outside US market hours (see src/stocks/market-hours.ts),
+# so this is cheap the rest of the day. Still well within the free tier.
 [triggers]
-crons = ["*/5 * * * *"]
+crons = ["* * * * *"]
 
 # After running `wrangler d1 create watchlist-db`, paste the database_id it prints below.
 [[d1_databases]]
