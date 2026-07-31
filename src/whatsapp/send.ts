@@ -41,7 +41,7 @@ export async function sendPriceAlertTemplate(
     type: "template",
     template: {
       name: "price_target_alert",
-      language: { code: "en_US" },
+      language: { code: "en" }, // matches the language Meta actually approved the template under
       components: [
         {
           type: "body",
