@@ -1,5 +1,5 @@
 import type { Env } from "./config";
-import { listActiveRows, markAlerted, type WatchlistRow } from "./db/watchlist";
+import { listActiveRows, deleteRowById, type WatchlistRow } from "./db/watchlist";
 import { recordCronRun } from "./db/status";
 import { getQuotes } from "./stocks/finnhub";
 import { isMarketOpen } from "./stocks/market-hours";
@@ -22,7 +22,8 @@ async function runPriceCheck(env: Env): Promise<{ tickersChecked: number; alerts
   const rows = await listActiveRows(env);
   if (rows.length === 0) return { tickersChecked: 0, alertsSent: 0 };
 
-  const quotes = await getQuotes(env, rows.map((r) => r.ticker));
+  const uniqueTickers = [...new Set(rows.map((r) => r.ticker))];
+  const quotes = await getQuotes(env, uniqueTickers);
   const priceByTicker = new Map(quotes.map((q) => [q.ticker, q.price]));
 
   let alertsSent = 0;
@@ -39,7 +40,7 @@ async function runPriceCheck(env: Env): Promise<{ tickersChecked: number; alerts
     };
 
     await sendPriceAlertTemplate(env, row.added_by, params);
-    await markAlerted(env, row.ticker, row.added_by, price);
+    await deleteRowById(env, row.id);
     alertsSent++;
   }
 

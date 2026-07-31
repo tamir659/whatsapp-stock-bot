@@ -14,7 +14,8 @@
     "db:migrate4:local": "wrangler d1 execute watchlist-db --local --file=migrations/0004_conversation_history.sql",
     "db:migrate4:remote": "wrangler d1 execute watchlist-db --remote --file=migrations/0004_conversation_history.sql",
     "db:migrate5:remote": "wrangler d1 execute watchlist-db --remote --file=migrations/0005_valid_tickers.sql",
-    "db:migrate6:remote": "wrangler d1 execute watchlist-db --remote --file=migrations/0006_seed_valid_tickers.sql"
+    "db:migrate6:remote": "wrangler d1 execute watchlist-db --remote --file=migrations/0006_seed_valid_tickers.sql",
+    "db:migrate7:remote": "wrangler d1 execute watchlist-db --remote --file=migrations/0007_allow_duplicate_tickers.sql"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260722.1",

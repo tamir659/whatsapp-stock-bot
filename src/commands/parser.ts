@@ -5,6 +5,7 @@ export type ParsedCommand =
   | { action: "remove"; ticker: string }
   | { action: "list" }
   | { action: "prices" }
+  | { action: "clear" }
   | { action: "help" }
   | { action: "unknown"; raw: string };
 
@@ -12,6 +13,7 @@ const ADD_WORDS = new Set(["add", "הוסף"]);
 const REMOVE_WORDS = new Set(["remove", "הסר"]);
 const LIST_WORDS = new Set(["list", "רשימה"]);
 const PRICES_WORDS = new Set(["price", "prices", "מחיר", "מחירים"]);
+const CLEAR_WORDS = new Set(["clear", "reset", "נקה", "אפס"]);
 const HELP_WORDS = new Set(["help", "עזרה"]);
 const ABOVE_WORDS = new Set(["above", "מעל"]);
 const BELOW_WORDS = new Set(["below", "מתחת"]);
@@ -25,6 +27,7 @@ export function parseCommand(rawText: string): ParsedCommand {
 
   if (LIST_WORDS.has(head)) return { action: "list" };
   if (PRICES_WORDS.has(head)) return { action: "prices" };
+  if (CLEAR_WORDS.has(head)) return { action: "clear" };
   if (HELP_WORDS.has(head)) return { action: "help" };
 
   if (REMOVE_WORDS.has(head)) {

@@ -8,12 +8,11 @@ export async function handleList(env: Env, from: string): Promise<string> {
   }
 
   const lines = rows.map((r) => {
-    const status = r.triggered ? " (alert already sent)" : "";
     const target =
       r.condition === "near"
         ? `within ${r.near_pct}% of ${r.target_price}`
         : `${r.condition} ${r.target_price}`;
-    return `${r.ticker}: ${target}${status}`;
+    return `${r.ticker}: ${target}`;
   });
 
   return `Watchlist:\n${lines.join("\n")}`;

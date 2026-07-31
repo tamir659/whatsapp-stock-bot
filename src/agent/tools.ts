@@ -1,5 +1,5 @@
 import type { Env } from "../config";
-import { addRow, listRows, removeRow, type Condition } from "../db/watchlist";
+import { addRow, listRows, removeRow, clearRows, type Condition } from "../db/watchlist";
 import { getQuotes } from "../stocks/finnhub";
 import { isKnownTicker } from "../db/tickers";
 import { handlePrices } from "../commands/prices";
@@ -9,7 +9,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "add_stock",
     description:
-      "Add a US stock (NASDAQ/NYSE) to the user's personal watchlist with a target price. Triggers a WhatsApp alert later when the price crosses the target.",
+      "Add a US stock (NASDAQ/NYSE) to the user's personal watchlist with a target price. Triggers a WhatsApp alert later when the price crosses the target, then that entry is removed automatically. The same ticker can be added more than once with different targets/conditions — that's allowed, not a duplicate error.",
     input_schema: {
       type: "object",
       properties: {
@@ -30,7 +30,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: "remove_stock",
-    description: "Remove a stock from the user's personal watchlist.",
+    description: "Remove a stock from the user's personal watchlist. Removes every entry for that ticker if there are duplicates with different targets.",
     input_schema: {
       type: "object",
       properties: {
@@ -59,6 +59,11 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     name: "get_watchlist_prices",
     description:
       "Get the current live price of every stock on the user's watchlist, alongside its target. Use this for things like 'how are my stocks doing?'",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "clear_watchlist",
+    description: "Remove everything from the user's personal watchlist at once.",
     input_schema: { type: "object", properties: {} },
   },
 ];
@@ -105,6 +110,10 @@ export async function runTool(
     }
     case "get_watchlist_prices":
       return handlePrices(env, phoneNumber);
+    case "clear_watchlist": {
+      const count = await clearRows(env, phoneNumber);
+      return count > 0 ? `Cleared ${count} stock(s) from the watchlist.` : "The watchlist was already empty.";
+    }
     default:
       return `Unknown tool: ${name}`;
   }

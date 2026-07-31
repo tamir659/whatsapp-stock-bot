@@ -8,7 +8,8 @@ export async function handlePrices(env: Env, from: string): Promise<string> {
     return "Your watchlist is empty. Add one with: add AAPL 220";
   }
 
-  const quotes = await getQuotes(env, rows.map((r) => r.ticker));
+  const uniqueTickers = [...new Set(rows.map((r) => r.ticker))];
+  const quotes = await getQuotes(env, uniqueTickers);
   const priceByTicker = new Map(quotes.map((q) => [q.ticker, q.price]));
 
   const lines = rows.map((r) => {
