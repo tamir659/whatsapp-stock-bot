@@ -54,7 +54,10 @@ function formatMessage(entries: ScreenerEntry[]): string {
 // plain free-form text message works — no pre-approved message template needed.
 export async function handleScreenerAlert(request: Request, env: Env): Promise<Response> {
   const secret = request.headers.get("X-Screener-Secret");
-  if (!secret || secret !== env.SCREENER_SECRET) {
+  // .trim(): a stray trailing newline in a copy-pasted secret is a known failure mode here
+  // (confirmed live, 2026-08-04, on the ma150-screener/GitHub Actions side) — don't let the
+  // same class of bug cause a silent auth mismatch on this side too.
+  if (!secret || secret.trim() !== env.SCREENER_SECRET.trim()) {
     return new Response("Unauthorized", { status: 401 });
   }
 
