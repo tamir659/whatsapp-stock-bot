@@ -6,6 +6,8 @@ export interface Env {
   WHATSAPP_APP_SECRET: string;
   FINNHUB_KEY: string;
   ANTHROPIC_API_KEY: string;
+  SCREENER_SECRET: string;
+  SCREENER_RECIPIENTS: string;
 }
 
 export const AGENT_MODEL = "claude-sonnet-5";
