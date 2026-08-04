@@ -1,12 +1,11 @@
 import type { Env } from "./config";
 import { sendText } from "./whatsapp/send";
 
-// Assumes the ma150-screener repo lives at this path under the same GitHub account as this
-// project (see ../whatsapp-stock-bot/CLAUDE.md) and its default branch is "master" — adjust
-// here if either turns out different once that repo actually exists on GitHub.
+// The ma150-screener repo, pushed 2026-08-04 under the same GitHub account as this project
+// (see ../whatsapp-stock-bot/CLAUDE.md), default branch "main" — confirmed via the actual push.
 const SCREENER_REPO = "tamir659/ma150-screener";
 const SCREENER_WORKFLOW = "on_demand.yml";
-const SCREENER_REF = "master";
+const SCREENER_REF = "main";
 
 // Triggers the ma150-screener GitHub Actions job on demand, passing the requester's phone
 // number as a workflow input so the job knows who to reply to when it's done (a few minutes
