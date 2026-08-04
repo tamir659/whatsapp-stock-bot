@@ -11,6 +11,7 @@ import { handlePrices } from "./commands/prices";
 import { handleClear } from "./commands/clear";
 import { runAgent } from "./agent/loop";
 import { appendTurn, getRecentTurns, trimHistory } from "./db/conversation";
+import { triggerScreenerScan } from "./screener";
 
 const HELP_TEXT = [
   "Commands:",
@@ -21,6 +22,7 @@ const HELP_TEXT = [
   "list",
   "prices — current live prices for your watchlist",
   "clear — removes your entire watchlist",
+  "screener — scan the S&P 500 for the 20 stocks closest to their 150-day moving average (takes a few minutes)",
 ].join("\n");
 
 // Meta calls this once when you save the webhook URL in the WhatsApp Configuration page.
@@ -69,6 +71,14 @@ async function handleIncomingMessages(request: Request, env: Env): Promise<Respo
         break;
       case "help":
         reply = HELP_TEXT;
+        break;
+      case "screener":
+        try {
+          await triggerScreenerScan(env, msg.from);
+          reply = "Scanning the S&P 500 for stocks closest to their 150-day moving average — I'll message you the list in a few minutes.";
+        } catch {
+          reply = "Couldn't start the screener scan right now, sorry — try again in a bit.";
+        }
         break;
       default: {
         try {

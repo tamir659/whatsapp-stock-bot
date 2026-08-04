@@ -7,7 +7,7 @@ export interface Env {
   FINNHUB_KEY: string;
   ANTHROPIC_API_KEY: string;
   SCREENER_SECRET: string;
-  SCREENER_RECIPIENTS: string;
+  SCREENER_GITHUB_TOKEN: string;
 }
 
 export const AGENT_MODEL = "claude-sonnet-5";

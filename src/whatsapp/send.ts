@@ -56,26 +56,3 @@ export async function sendPriceAlertTemplate(
     },
   });
 }
-
-// Business-initiated MA150 screener alert (from the separate `ma150-screener` project).
-// Requires the "ma150_screener_alert" utility template to be approved in Meta's WhatsApp
-// Manager first — not yet created as of 2026-08-04. The template has a single {{1}} body
-// parameter: WhatsApp template parameters cannot contain newline characters, so the summary
-// must stay on one line (comma-separated "TICKER +X.X%" entries), not one stock per line.
-export async function sendScreenerAlert(env: Env, to: string, summary: string): Promise<void> {
-  await callGraphApi(env, {
-    messaging_product: "whatsapp",
-    to,
-    type: "template",
-    template: {
-      name: "ma150_screener_alert",
-      language: { code: "en" },
-      components: [
-        {
-          type: "body",
-          parameters: [{ type: "text", text: summary }],
-        },
-      ],
-    },
-  });
-}
