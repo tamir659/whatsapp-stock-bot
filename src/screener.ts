@@ -12,7 +12,7 @@ const SCREENER_REF = "main";
 // later, via handleScreenerAlert below). Fire-and-forget: this call only confirms the job was
 // *queued*, not that the scan succeeded — errors from the scan itself never reach the user
 // beyond "no reply arrived."
-export async function triggerScreenerScan(env: Env, phoneNumber: string): Promise<void> {
+export async function triggerScreenerScan(env: Env, phoneNumber: string, period: 150 | 20): Promise<void> {
   const url = `https://api.github.com/repos/${SCREENER_REPO}/actions/workflows/${SCREENER_WORKFLOW}/dispatches`;
   const res = await fetch(url, {
     method: "POST",
@@ -24,7 +24,7 @@ export async function triggerScreenerScan(env: Env, phoneNumber: string): Promis
     },
     body: JSON.stringify({
       ref: SCREENER_REF,
-      inputs: { phone_number: phoneNumber },
+      inputs: { phone_number: phoneNumber, period: String(period) },
     }),
   });
   if (!res.ok) {
@@ -40,12 +40,12 @@ interface ScreenerEntry {
   distance: number;
 }
 
-function formatMessage(entries: ScreenerEntry[]): string {
+function formatMessage(entries: ScreenerEntry[], period: number): string {
   const lines = entries.map((e) => {
     const sign = e.distance >= 0 ? "+" : "";
-    return `${e.ticker}: $${e.price.toFixed(2)} (SMA150: $${e.average.toFixed(2)}, ${sign}${e.distance.toFixed(2)}%)`;
+    return `${e.ticker}: $${e.price.toFixed(2)} (SMA${period}: $${e.average.toFixed(2)}, ${sign}${e.distance.toFixed(2)}%)`;
   });
-  return ["20 stocks closest to their 150-day moving average:", "", ...lines].join("\n");
+  return [`${entries.length} stocks closest to their ${period}-day moving average:`, "", ...lines].join("\n");
 }
 
 // Called by the ma150-screener GitHub Actions job once its scan finishes — authenticated with
@@ -61,7 +61,12 @@ export async function handleScreenerAlert(request: Request, env: Env): Promise<R
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const body = (await request.json()) as { to: string; entries?: ScreenerEntry[]; error?: string };
+  const body = (await request.json()) as {
+    to: string;
+    entries?: ScreenerEntry[];
+    error?: string;
+    period?: number;
+  };
   if (!body.to) {
     return new Response("Bad request", { status: 400 });
   }
@@ -71,7 +76,8 @@ export async function handleScreenerAlert(request: Request, env: Env): Promise<R
   // the user got the "scanning..." ack and then nothing, ever, with no way to tell a real
   // failure apart from "still running." screener.py now reports failures here explicitly.
   if (body.error) {
-    await sendText(env, body.to, `Couldn't finish the 150-day scan: ${body.error}. Try again in a bit.`);
+    const period = body.period ?? 150;
+    await sendText(env, body.to, `Couldn't finish the ${period}-day scan: ${body.error}. Try again in a bit.`);
     return new Response("OK", { status: 200 });
   }
 
@@ -79,6 +85,6 @@ export async function handleScreenerAlert(request: Request, env: Env): Promise<R
     return new Response("Bad request", { status: 400 });
   }
 
-  await sendText(env, body.to, formatMessage(body.entries));
+  await sendText(env, body.to, formatMessage(body.entries, body.period ?? 150));
   return new Response("OK", { status: 200 });
 }

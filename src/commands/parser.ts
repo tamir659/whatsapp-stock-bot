@@ -7,7 +7,7 @@ export type ParsedCommand =
   | { action: "prices" }
   | { action: "clear" }
   | { action: "help" }
-  | { action: "screener" }
+  | { action: "screener"; period: 150 | 20 }
   | { action: "unknown"; raw: string };
 
 const ADD_WORDS = new Set(["add", "הוסף"]);
@@ -16,7 +16,8 @@ const LIST_WORDS = new Set(["list", "רשימה"]);
 const PRICES_WORDS = new Set(["price", "prices", "מחיר", "מחירים"]);
 const CLEAR_WORDS = new Set(["clear", "reset", "נקה", "אפס"]);
 const HELP_WORDS = new Set(["help", "עזרה"]);
-const SCREENER_WORDS = new Set(["screener", "ma150", "150", "סקרינר"]);
+const SCREENER_150_WORDS = new Set(["screener", "ma150", "150", "סקרינר"]);
+const SCREENER_20_WORDS = new Set(["twenty", "ma20", "20", "עשרים"]);
 const ABOVE_WORDS = new Set(["above", "מעל"]);
 const BELOW_WORDS = new Set(["below", "מתחת"]);
 const NEAR_WORDS = new Set(["near", "קרוב"]);
@@ -31,7 +32,8 @@ export function parseCommand(rawText: string): ParsedCommand {
   if (PRICES_WORDS.has(head)) return { action: "prices" };
   if (CLEAR_WORDS.has(head)) return { action: "clear" };
   if (HELP_WORDS.has(head)) return { action: "help" };
-  if (SCREENER_WORDS.has(head)) return { action: "screener" };
+  if (SCREENER_150_WORDS.has(head)) return { action: "screener", period: 150 };
+  if (SCREENER_20_WORDS.has(head)) return { action: "screener", period: 20 };
 
   if (REMOVE_WORDS.has(head)) {
     const ticker = rest[0]?.toUpperCase();

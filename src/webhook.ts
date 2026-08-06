@@ -22,6 +22,7 @@ const HELP_TEXT = [
   "prices — live prices for your list",
   "clear — empties your list",
   "150 — finds stocks near their 150-day average",
+  "20 — finds stocks near their 20-day average",
 ].join("\n");
 
 // Meta calls this once when you save the webhook URL in the WhatsApp Configuration page.
@@ -73,8 +74,8 @@ async function handleIncomingMessages(request: Request, env: Env): Promise<Respo
         break;
       case "screener":
         try {
-          await triggerScreenerScan(env, msg.from);
-          reply = "Scanning the S&P 500 for stocks closest to their 150-day moving average — I'll message you the list in a few minutes.";
+          await triggerScreenerScan(env, msg.from, cmd.period);
+          reply = `Scanning the S&P 500 for stocks closest to their ${cmd.period}-day moving average — I'll message you the list in a few minutes.`;
         } catch {
           reply = "Couldn't start the screener scan right now, sorry — try again in a bit.";
         }
