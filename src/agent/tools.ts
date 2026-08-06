@@ -3,6 +3,7 @@ import { addRow, listRows, removeRow, clearRows, type Condition } from "../db/wa
 import { getQuotes } from "../stocks/finnhub";
 import { isKnownTicker } from "../db/tickers";
 import { handlePrices } from "../commands/prices";
+import { formatWatchlist } from "../commands/list";
 import type { ToolDefinition } from "./types";
 
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
@@ -85,23 +86,23 @@ export async function runTool(
       const condition = (input.condition as Condition | undefined) ?? "above";
       const nearPct = condition === "near" ? Number(input.near_pct ?? 1) : null;
       await addRow(env, ticker, targetPrice, condition, nearPct, phoneNumber);
-      return `Added ${ticker}: alert when price goes ${condition} ${targetPrice}.`;
+      const confirmation =
+        condition === "near"
+          ? `Added ${ticker}: alert when price is within ${nearPct}% of ${targetPrice}.`
+          : `Added ${ticker}: alert when price goes ${condition} ${targetPrice}.`;
+      const addedRows = await listRows(env, phoneNumber);
+      return `${confirmation}\n\n${formatWatchlist(addedRows)}`;
     }
     case "remove_stock": {
       const ticker = String(input.ticker).toUpperCase();
       const removed = await removeRow(env, ticker, phoneNumber);
-      return removed ? `Removed ${ticker}.` : `${ticker} wasn't on the watchlist.`;
+      if (!removed) return `${ticker} wasn't on the watchlist.`;
+      const remainingRows = await listRows(env, phoneNumber);
+      return `Removed ${ticker}.\n\n${formatWatchlist(remainingRows)}`;
     }
     case "list_stocks": {
       const rows = await listRows(env, phoneNumber);
-      if (rows.length === 0) return "The watchlist is empty.";
-      return rows
-        .map((r) =>
-          r.condition === "near"
-            ? `${r.ticker}: within ${r.near_pct}% of ${r.target_price}`
-            : `${r.ticker}: ${r.condition} ${r.target_price}`
-        )
-        .join("\n");
+      return formatWatchlist(rows);
     }
     case "get_price": {
       const ticker = String(input.ticker).toUpperCase();

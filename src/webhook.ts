@@ -15,14 +15,13 @@ import { triggerScreenerScan } from "./screener";
 
 const HELP_TEXT = [
   "Commands:",
-  "add TICKER PRICE — e.g. add AAPL 220 (you can add the same ticker more than once with different targets)",
-  "add TICKER above|below PRICE",
-  "add TICKER near PRICE PCT% — e.g. add AAPL near 220 2%",
-  "remove TICKER — removes every entry for that ticker",
-  "list",
-  "prices — current live prices for your watchlist",
-  "clear — removes your entire watchlist",
-  "screener — scan the S&P 500 for the 20 stocks closest to their 150-day moving average (takes a few minutes)",
+  "add ticker above/below price",
+  "add ticker near price pct% — alerts within a % range",
+  "remove ticker — removes it from your list",
+  "list — shows your watchlist",
+  "prices — live prices for your list",
+  "clear — empties your list",
+  "150 — finds stocks near their 150-day average",
 ].join("\n");
 
 // Meta calls this once when you save the webhook URL in the WhatsApp Configuration page.

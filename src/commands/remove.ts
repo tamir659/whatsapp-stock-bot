@@ -1,6 +1,7 @@
 import type { Env } from "../config";
-import { removeRow } from "../db/watchlist";
+import { removeRow, listRows } from "../db/watchlist";
 import type { ParsedCommand } from "./parser";
+import { formatWatchlist } from "./list";
 
 export async function handleRemove(
   env: Env,
@@ -8,7 +9,10 @@ export async function handleRemove(
   from: string
 ): Promise<string> {
   const removed = await removeRow(env, cmd.ticker, from);
-  return removed
-    ? `Removed ${cmd.ticker} from your watchlist.`
-    : `${cmd.ticker} wasn't on your watchlist.`;
+  if (!removed) {
+    return `${cmd.ticker} wasn't on your watchlist.`;
+  }
+
+  const rows = await listRows(env, from);
+  return `Removed ${cmd.ticker} from your watchlist.\n\n${formatWatchlist(rows)}`;
 }

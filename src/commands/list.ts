@@ -1,8 +1,7 @@
 import type { Env } from "../config";
-import { listRows } from "../db/watchlist";
+import { listRows, type WatchlistRow } from "../db/watchlist";
 
-export async function handleList(env: Env, from: string): Promise<string> {
-  const rows = await listRows(env, from);
+export function formatWatchlist(rows: WatchlistRow[]): string {
   if (rows.length === 0) {
     return "Your watchlist is empty. Add one with: add AAPL 220";
   }
@@ -16,4 +15,9 @@ export async function handleList(env: Env, from: string): Promise<string> {
   });
 
   return `Watchlist:\n${lines.join("\n")}`;
+}
+
+export async function handleList(env: Env, from: string): Promise<string> {
+  const rows = await listRows(env, from);
+  return formatWatchlist(rows);
 }

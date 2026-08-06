@@ -61,8 +61,21 @@ export async function handleScreenerAlert(request: Request, env: Env): Promise<R
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const body = (await request.json()) as { to: string; entries: ScreenerEntry[] };
-  if (!body.to || !Array.isArray(body.entries) || body.entries.length === 0) {
+  const body = (await request.json()) as { to: string; entries?: ScreenerEntry[]; error?: string };
+  if (!body.to) {
+    return new Response("Bad request", { status: 400 });
+  }
+
+  // The scan itself (GitHub Actions job) can fail partway through — network hiccups, a
+  // rate-limited data source, etc. Without this branch, a failure there just meant silence:
+  // the user got the "scanning..." ack and then nothing, ever, with no way to tell a real
+  // failure apart from "still running." screener.py now reports failures here explicitly.
+  if (body.error) {
+    await sendText(env, body.to, `Couldn't finish the 150-day scan: ${body.error}. Try again in a bit.`);
+    return new Response("OK", { status: 200 });
+  }
+
+  if (!Array.isArray(body.entries) || body.entries.length === 0) {
     return new Response("Bad request", { status: 400 });
   }
 

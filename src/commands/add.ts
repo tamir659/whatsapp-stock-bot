@@ -1,7 +1,8 @@
 import type { Env } from "../config";
-import { addRow } from "../db/watchlist";
+import { addRow, listRows } from "../db/watchlist";
 import { isKnownTicker } from "../db/tickers";
 import type { ParsedCommand } from "./parser";
+import { formatWatchlist } from "./list";
 
 export async function handleAdd(
   env: Env,
@@ -15,8 +16,11 @@ export async function handleAdd(
 
   await addRow(env, cmd.ticker, cmd.targetPrice, cmd.condition, cmd.nearPct, from);
 
-  if (cmd.condition === "near") {
-    return `Added ${cmd.ticker}: alert when price is within ${cmd.nearPct}% of ${cmd.targetPrice}.`;
-  }
-  return `Added ${cmd.ticker}: alert when price goes ${cmd.condition} ${cmd.targetPrice}.`;
+  const confirmation =
+    cmd.condition === "near"
+      ? `Added ${cmd.ticker}: alert when price is within ${cmd.nearPct}% of ${cmd.targetPrice}.`
+      : `Added ${cmd.ticker}: alert when price goes ${cmd.condition} ${cmd.targetPrice}.`;
+
+  const rows = await listRows(env, from);
+  return `${confirmation}\n\n${formatWatchlist(rows)}`;
 }
