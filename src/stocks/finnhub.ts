@@ -1,4 +1,5 @@
 import type { Env } from "../config";
+import { toFinnhubSymbol } from "./crypto";
 
 export interface Quote {
   ticker: string;
@@ -19,7 +20,8 @@ function sleep(ms: number): Promise<void> {
 // as "invalid" on transient failures; a no-delay double-attempt still wasn't always
 // enough (BMNR took the user 3 manual retries), so this waits briefly between tries.
 export async function getQuote(env: Env, ticker: string): Promise<Quote | null> {
-  const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${env.FINNHUB_KEY}`;
+  const apiSymbol = toFinnhubSymbol(ticker);
+  const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(apiSymbol)}&token=${env.FINNHUB_KEY}`;
   const maxAttempts = 4;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -29,6 +31,11 @@ export async function getQuote(env: Env, ticker: string): Promise<Quote | null> 
       if (typeof data.c === "number" && data.c !== 0) {
         return { ticker, price: data.c };
       }
+    } else {
+      // Drain the body even on failure — an unread response body on a retried fetch()
+      // is what triggers Workers' "stalled HTTP response" deadlock-prevention cancellation
+      // (seen live in production cron logs, multiple tickers retrying in parallel).
+      await res.text().catch(() => {});
     }
     if (attempt < maxAttempts - 1) {
       await sleep(400);

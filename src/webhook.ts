@@ -17,6 +17,7 @@ const HELP_TEXT = [
   "Commands:",
   "add ticker above/below price",
   "add ticker near price pct% — alerts within a % range",
+  "crypto tickers also work: BTC, ETH, SOL",
   "remove ticker — removes it from your list",
   "list — shows your watchlist",
   "prices — live prices for your list",

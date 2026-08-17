@@ -3,6 +3,7 @@ import { listActiveRows, deleteRowById, type WatchlistRow } from "./db/watchlist
 import { recordCronRun } from "./db/status";
 import { getQuotes } from "./stocks/finnhub";
 import { isMarketOpen } from "./stocks/market-hours";
+import { isCryptoTicker } from "./stocks/crypto";
 import { sendPriceAlertTemplate } from "./whatsapp/send";
 
 function isTriggered(row: WatchlistRow, price: number): boolean {
@@ -19,7 +20,13 @@ function isTriggered(row: WatchlistRow, price: number): boolean {
 }
 
 async function runPriceCheck(env: Env): Promise<{ tickersChecked: number; alertsSent: number }> {
-  const rows = await listActiveRows(env);
+  const allRows = await listActiveRows(env);
+  if (allRows.length === 0) return { tickersChecked: 0, alertsSent: 0 };
+
+  // Stocks only trade during US market hours; crypto trades 24/7, so it's checked
+  // on every cron tick regardless of isMarketOpen().
+  const marketOpen = isMarketOpen();
+  const rows = allRows.filter((r) => isCryptoTicker(r.ticker) || marketOpen);
   if (rows.length === 0) return { tickersChecked: 0, alertsSent: 0 };
 
   const uniqueTickers = [...new Set(rows.map((r) => r.ticker))];
@@ -48,11 +55,6 @@ async function runPriceCheck(env: Env): Promise<{ tickersChecked: number; alerts
 }
 
 export async function checkPrices(env: Env): Promise<void> {
-  if (!isMarketOpen()) {
-    await recordCronRun(env, "ok", "skipped — market closed", 0, 0);
-    return;
-  }
-
   try {
     const { tickersChecked, alertsSent } = await runPriceCheck(env);
     await recordCronRun(env, "ok", `checked ${tickersChecked}, alerted ${alertsSent}`, tickersChecked, alertsSent);
