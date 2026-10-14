@@ -4,7 +4,7 @@ import { recordCronRun } from "./db/status";
 import { getQuotes } from "./stocks/finnhub";
 import { isMarketOpen } from "./stocks/market-hours";
 import { isCryptoTicker } from "./stocks/crypto";
-import { sendPriceAlertTemplate } from "./whatsapp/send";
+import { sendPriceAlert } from "./telegram/send";
 
 function isTriggered(row: WatchlistRow, price: number): boolean {
   switch (row.condition) {
@@ -46,7 +46,7 @@ async function runPriceCheck(env: Env): Promise<{ tickersChecked: number; alerts
       condition: row.condition,
     };
 
-    await sendPriceAlertTemplate(env, row.added_by, params);
+    await sendPriceAlert(env, row.added_by, params);
     await deleteRowById(env, row.id);
     alertsSent++;
   }

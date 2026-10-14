@@ -1,56 +1,51 @@
 import type { Env } from "./config";
-import { AGENT_HISTORY_TURN_LIMIT } from "./config";
-import { extractMessages, type InboundWebhookPayload } from "./whatsapp/types";
-import { sendText } from "./whatsapp/send";
-import { verifySignature } from "./whatsapp/verify";
+import { extractMessages, type TelegramUpdate } from "./telegram/types";
+import { sendMessage } from "./telegram/send";
+import { verifySecret } from "./telegram/verify";
+import { isAuthorized, authorize } from "./db/authorized";
 import { parseCommand } from "./commands/parser";
 import { handleAdd } from "./commands/add";
 import { handleRemove } from "./commands/remove";
 import { handleList } from "./commands/list";
 import { handlePrices } from "./commands/prices";
 import { handleClear } from "./commands/clear";
-import { runAgent } from "./agent/loop";
-import { appendTurn, getRecentTurns, trimHistory } from "./db/conversation";
-import { triggerScreenerScan } from "./screener";
+import { triggerScreenerScan, triggerReboundScan } from "./screener";
 
 const HELP_TEXT = [
   "Commands:",
-  "add ticker above/below price",
-  "add ticker near price pct% — alerts within a % range",
-  "crypto tickers also work: BTC, ETH, SOL",
+  "ticker above/below price — e.g. AAPL above 220 (\"add\" is optional)",
+  "ticker near price pct% — alerts within a % range",
+  "crypto tickers also work: BTC, ETH, SOL (or bitcoin/ethereum/solana)",
   "remove ticker — removes it from your list",
   "list — shows your watchlist",
   "prices — live prices for your list",
   "clear — empties your list",
   "150 — finds stocks near their 150-day average",
   "20 — finds stocks near their 20-day average",
+  "rebound / ath — deep-dive: stocks well below their all-time high with oversold signals, plus an AI writeup per candidate",
+  "menu / help — shows this list",
 ].join("\n");
 
-// Meta calls this once when you save the webhook URL in the WhatsApp Configuration page.
-function handleVerification(request: Request, env: Env): Response {
-  const url = new URL(request.url);
-  const mode = url.searchParams.get("hub.mode");
-  const token = url.searchParams.get("hub.verify_token");
-  const challenge = url.searchParams.get("hub.challenge");
-
-  if (mode === "subscribe" && token === env.WHATSAPP_VERIFY_TOKEN && challenge) {
-    return new Response(challenge, { status: 200 });
-  }
-  return new Response("Forbidden", { status: 403 });
-}
-
 async function handleIncomingMessages(request: Request, env: Env): Promise<Response> {
-  const rawBody = await request.text();
-  const signature = request.headers.get("X-Hub-Signature-256");
-  const isValid = await verifySignature(rawBody, signature, env.WHATSAPP_APP_SECRET);
-  if (!isValid) {
+  const secretHeader = request.headers.get("X-Telegram-Bot-Api-Secret-Token");
+  if (!verifySecret(secretHeader, env.TELEGRAM_WEBHOOK_SECRET)) {
     return new Response("Invalid signature", { status: 401 });
   }
 
-  const payload = JSON.parse(rawBody) as InboundWebhookPayload;
-  const messages = extractMessages(payload);
+  const update = (await request.json()) as TelegramUpdate;
+  const messages = extractMessages(update);
 
   for (const msg of messages) {
+    if (!(await isAuthorized(env, msg.from))) {
+      if (env.BOT_PASSWORD && msg.text.trim() === env.BOT_PASSWORD) {
+        await authorize(env, msg.from);
+        await sendMessage(env, msg.from, `Correct — you're authorized.\n\n${HELP_TEXT}`);
+      } else {
+        await sendMessage(env, msg.from, "This bot is private. Enter the password to continue.");
+      }
+      continue;
+    }
+
     const cmd = parseCommand(msg.text);
     let reply: string;
 
@@ -81,30 +76,28 @@ async function handleIncomingMessages(request: Request, env: Env): Promise<Respo
           reply = "Couldn't start the screener scan right now, sorry — try again in a bit.";
         }
         break;
-      default: {
+      case "rebound":
         try {
-          const history = await getRecentTurns(env, msg.from, AGENT_HISTORY_TURN_LIMIT);
-          reply = await runAgent(env, msg.from, history, msg.text);
-          await appendTurn(env, msg.from, "user", msg.text);
-          await appendTurn(env, msg.from, "assistant", reply);
-          await trimHistory(env, msg.from, AGENT_HISTORY_TURN_LIMIT);
+          await triggerReboundScan(env, msg.from);
+          reply =
+            "Scanning for stocks well below their all-time high with oversold signals, plus writing up an analysis for each — this one takes a few extra minutes since it includes an AI writeup.";
         } catch {
-          // Agent unavailable (e.g. Anthropic API/key issue) — fail soft instead of
-          // dropping the reply entirely.
-          reply = `Sorry, I didn't understand that.\n\n${HELP_TEXT}`;
+          reply = "Couldn't start the rebound scan right now, sorry — try again in a bit.";
         }
-      }
+        break;
+      default:
+        reply = `Not sure what you mean — here's what I can do:\n\n${HELP_TEXT}`;
     }
 
-    await sendText(env, msg.from, reply);
+    await sendMessage(env, msg.from, reply);
   }
 
-  // Always 200 quickly — Meta retries with backoff if it doesn't get one.
+  // Always 200 quickly — Telegram retries with backoff if it doesn't get one.
   return new Response("OK", { status: 200 });
 }
 
 export async function handleWebhookRequest(request: Request, env: Env): Promise<Response> {
-  if (request.method === "GET") return handleVerification(request, env);
+  if (request.method === "GET") return new Response("ok", { status: 200 });
   if (request.method === "POST") return handleIncomingMessages(request, env);
   return new Response("Method Not Allowed", { status: 405 });
 }

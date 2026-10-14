@@ -3,6 +3,7 @@ import { handleWebhookRequest } from "./webhook";
 import { handleStatusRequest } from "./status";
 import { handleScreenerAlert } from "./screener";
 import { checkPrices } from "./cron";
+import { isBriefingTime, sendMorningBriefing } from "./morningBriefing";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -18,5 +19,8 @@ export default {
 
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(checkPrices(env));
+    if (isBriefingTime()) {
+      ctx.waitUntil(sendMorningBriefing(env));
+    }
   },
 };

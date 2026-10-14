@@ -1,9 +1,9 @@
 export interface Env {
   DB: D1Database;
-  WHATSAPP_TOKEN: string;
-  WHATSAPP_PHONE_ID: string;
-  WHATSAPP_VERIFY_TOKEN: string;
-  WHATSAPP_APP_SECRET: string;
+  TELEGRAM_BOT_TOKEN: string;
+  TELEGRAM_WEBHOOK_SECRET: string;
+  BOT_PASSWORD: string;
+  OWNER_CHAT_ID: string;
   FINNHUB_KEY: string;
   ANTHROPIC_API_KEY: string;
   SCREENER_SECRET: string;

@@ -22,7 +22,7 @@ function sleep(ms: number): Promise<void> {
 export async function getQuote(env: Env, ticker: string): Promise<Quote | null> {
   const apiSymbol = toFinnhubSymbol(ticker);
   const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(apiSymbol)}&token=${env.FINNHUB_KEY}`;
-  const maxAttempts = 4;
+  const maxAttempts = 8; // bumped from 4 (2026-09-30) — crypto quotes hiccupped more than that tolerated
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const res = await fetch(url);

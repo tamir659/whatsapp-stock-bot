@@ -1,6 +1,7 @@
 import type { Env } from "../config";
 import { addRow, listRows, removeRow, clearRows, type Condition } from "../db/watchlist";
 import { getQuotes } from "../stocks/finnhub";
+import { resolveCryptoAlias } from "../stocks/crypto";
 import { isKnownTicker } from "../db/tickers";
 import { handlePrices } from "../commands/prices";
 import { formatWatchlist } from "../commands/list";
@@ -10,7 +11,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "add_stock",
     description:
-      "Add a US stock (NASDAQ/NYSE) to the user's personal watchlist with a target price. Triggers a WhatsApp alert later when the price crosses the target, then that entry is removed automatically. The same ticker can be added more than once with different targets/conditions — that's allowed, not a duplicate error.",
+      "Add a US stock (NASDAQ/NYSE) to the user's personal watchlist with a target price. Triggers a Telegram alert later when the price crosses the target, then that entry is removed automatically. The same ticker can be added more than once with different targets/conditions — that's allowed, not a duplicate error.",
     input_schema: {
       type: "object",
       properties: {
@@ -77,7 +78,7 @@ export async function runTool(
 ): Promise<string> {
   switch (name) {
     case "add_stock": {
-      const ticker = String(input.ticker).toUpperCase();
+      const ticker = resolveCryptoAlias(String(input.ticker).toUpperCase());
       const known = await isKnownTicker(env, ticker);
       if (!known) {
         return `${ticker} doesn't look like a real ticker — double-check the symbol.`;
@@ -94,7 +95,7 @@ export async function runTool(
       return `${confirmation}\n\n${formatWatchlist(addedRows)}`;
     }
     case "remove_stock": {
-      const ticker = String(input.ticker).toUpperCase();
+      const ticker = resolveCryptoAlias(String(input.ticker).toUpperCase());
       const removed = await removeRow(env, ticker, phoneNumber);
       if (!removed) return `${ticker} wasn't on the watchlist.`;
       const remainingRows = await listRows(env, phoneNumber);
@@ -105,7 +106,7 @@ export async function runTool(
       return formatWatchlist(rows);
     }
     case "get_price": {
-      const ticker = String(input.ticker).toUpperCase();
+      const ticker = resolveCryptoAlias(String(input.ticker).toUpperCase());
       const [quote] = await getQuotes(env, [ticker]);
       return quote ? `${ticker} is currently at ${quote.price}.` : `Couldn't get a price for ${ticker}.`;
     }
