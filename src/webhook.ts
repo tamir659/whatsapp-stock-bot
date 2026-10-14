@@ -9,7 +9,7 @@ import { handleRemove } from "./commands/remove";
 import { handleList } from "./commands/list";
 import { handlePrices } from "./commands/prices";
 import { handleClear } from "./commands/clear";
-import { triggerScreenerScan, triggerReboundScan } from "./screener";
+import { triggerScreenerScan, triggerReboundScan, triggerFibonacciScan } from "./screener";
 
 const HELP_TEXT = [
   "Commands:",
@@ -23,6 +23,7 @@ const HELP_TEXT = [
   "150 — finds stocks near their 150-day average",
   "20 — finds stocks near their 20-day average",
   "rebound / ath — deep-dive: stocks well below their all-time high with oversold signals, plus an AI writeup per candidate",
+  "fibonacci / fib — stocks pulling back into the 61.8% Fibonacci retracement after a strong rally",
   "menu / help — shows this list",
 ].join("\n");
 
@@ -83,6 +84,15 @@ async function handleIncomingMessages(request: Request, env: Env): Promise<Respo
             "Scanning for stocks well below their all-time high with oversold signals, plus writing up an analysis for each — this one takes a few extra minutes since it includes an AI writeup.";
         } catch {
           reply = "Couldn't start the rebound scan right now, sorry — try again in a bit.";
+        }
+        break;
+      case "fibonacci":
+        try {
+          await triggerFibonacciScan(env, msg.from);
+          reply =
+            "Scanning for stocks pulling back into their 61.8% Fibonacci retracement after a strong rally — I'll message you the list in a few minutes.";
+        } catch {
+          reply = "Couldn't start the fibonacci scan right now, sorry — try again in a bit.";
         }
         break;
       default:

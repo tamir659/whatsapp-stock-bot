@@ -10,6 +10,7 @@ export type ParsedCommand =
   | { action: "help" }
   | { action: "screener"; period: 150 | 20 }
   | { action: "rebound" }
+  | { action: "fibonacci" }
   | { action: "unknown"; raw: string };
 
 const ADD_WORDS = new Set(["add", "הוסף"]);
@@ -21,6 +22,7 @@ const HELP_WORDS = new Set(["help", "menu", "עזרה", "תפריט"]);
 const SCREENER_150_WORDS = new Set(["screener", "ma150", "150", "סקרינר"]);
 const SCREENER_20_WORDS = new Set(["twenty", "ma20", "20", "עשרים"]);
 const REBOUND_WORDS = new Set(["rebound", "ath", "פוטנציאל"]);
+const FIBONACCI_WORDS = new Set(["fibonacci", "fib", "פיבונאצי"]);
 const ABOVE_WORDS = new Set(["above", "מעל"]);
 const BELOW_WORDS = new Set(["below", "מתחת"]);
 const NEAR_WORDS = new Set(["near", "קרוב"]);
@@ -79,6 +81,7 @@ export function parseCommand(rawText: string): ParsedCommand {
   if (SCREENER_150_WORDS.has(head)) return { action: "screener", period: 150 };
   if (SCREENER_20_WORDS.has(head)) return { action: "screener", period: 20 };
   if (REBOUND_WORDS.has(head)) return { action: "rebound" };
+  if (FIBONACCI_WORDS.has(head)) return { action: "fibonacci" };
 
   if (REMOVE_WORDS.has(head)) {
     const ticker = normalizeTicker(rest[0]);

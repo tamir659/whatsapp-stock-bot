@@ -6,6 +6,7 @@ import { sendMessage } from "./telegram/send";
 const SCREENER_REPO = "tamir659/ma150-screener";
 const SCREENER_WORKFLOW = "on_demand.yml";
 const REBOUND_WORKFLOW = "rebound.yml";
+const FIBONACCI_WORKFLOW = "fibonacci.yml";
 const SCREENER_REF = "main";
 
 async function dispatchWorkflow(env: Env, workflow: string, inputs: Record<string, string>): Promise<void> {
@@ -40,6 +41,13 @@ export async function triggerScreenerScan(env: Env, chatId: string, period: 150 
 // affect the fast, already-proven SMA150/20 screener above.
 export async function triggerReboundScan(env: Env, chatId: string): Promise<void> {
   await dispatchWorkflow(env, REBOUND_WORKFLOW, { phone_number: chatId });
+}
+
+// Third screener, same dispatch mechanism again — pure technical scan (swing-low to
+// swing-high rally + 61.8% Fibonacci retracement "golden pocket"), no AI/news involved,
+// so its own workflow file too (keeps it independent of the other two).
+export async function triggerFibonacciScan(env: Env, chatId: string): Promise<void> {
+  await dispatchWorkflow(env, FIBONACCI_WORKFLOW, { phone_number: chatId });
 }
 
 interface ScreenerEntry {
@@ -78,6 +86,23 @@ function formatReboundMessage(entries: ReboundEntry[]): string {
   );
 }
 
+interface FibonacciEntry {
+  ticker: string;
+  price: number;
+  swingLow: number;
+  swingHigh: number;
+  rallyPct: number;
+  fib618: number;
+}
+
+function formatFibonacciMessage(entries: FibonacciEntry[]): string {
+  const lines = entries.map(
+    (e) =>
+      `${e.ticker}: $${e.price.toFixed(2)} (rally +${e.rallyPct.toFixed(1)}% from $${e.swingLow.toFixed(2)} to $${e.swingHigh.toFixed(2)}; 61.8% level: $${e.fib618.toFixed(2)})`
+  );
+  return [`${entries.length} stock(s) in the 61.8% Fibonacci "golden pocket":`, "", ...lines].join("\n");
+}
+
 // Called by the ma150-screener GitHub Actions job once its scan finishes — authenticated with
 // a shared secret header, not the Telegram secret-token check, since the caller is GitHub
 // Actions, not Telegram. A plain text message, same as any other reply.
@@ -92,8 +117,8 @@ export async function handleScreenerAlert(request: Request, env: Env): Promise<R
 
   const body = (await request.json()) as {
     to: string;
-    kind?: "sma" | "rebound";
-    entries?: ScreenerEntry[] | ReboundEntry[];
+    kind?: "sma" | "rebound" | "fibonacci";
+    entries?: ScreenerEntry[] | ReboundEntry[] | FibonacciEntry[];
     error?: string;
     period?: number;
   };
@@ -107,7 +132,12 @@ export async function handleScreenerAlert(request: Request, env: Env): Promise<R
   // failure apart from "still running." screener.py/rebound_screener.py report failures here
   // explicitly.
   if (body.error) {
-    const label = body.kind === "rebound" ? "the rebound scan" : `the ${body.period ?? 150}-day scan`;
+    const label =
+      body.kind === "rebound"
+        ? "the rebound scan"
+        : body.kind === "fibonacci"
+          ? "the fibonacci scan"
+          : `the ${body.period ?? 150}-day scan`;
     await sendMessage(env, body.to, `Couldn't finish ${label}: ${body.error}. Try again in a bit.`);
     return new Response("OK", { status: 200 });
   }
@@ -122,7 +152,9 @@ export async function handleScreenerAlert(request: Request, env: Env): Promise<R
     const message =
       body.kind === "rebound"
         ? "No stocks currently match the rebound criteria (30%+ below their all-time high and RSI under 30). Try again another day."
-        : `No results from the ${body.period ?? 150}-day scan.`;
+        : body.kind === "fibonacci"
+          ? "No stocks are currently sitting in the 61.8% Fibonacci golden pocket. Try again another day."
+          : `No results from the ${body.period ?? 150}-day scan.`;
     await sendMessage(env, body.to, message);
     return new Response("OK", { status: 200 });
   }
@@ -130,7 +162,9 @@ export async function handleScreenerAlert(request: Request, env: Env): Promise<R
   const reply =
     body.kind === "rebound"
       ? formatReboundMessage(body.entries as ReboundEntry[])
-      : formatMessage(body.entries as ScreenerEntry[], body.period ?? 150);
+      : body.kind === "fibonacci"
+        ? formatFibonacciMessage(body.entries as FibonacciEntry[])
+        : formatMessage(body.entries as ScreenerEntry[], body.period ?? 150);
   await sendMessage(env, body.to, reply);
   return new Response("OK", { status: 200 });
 }
