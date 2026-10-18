@@ -1,3 +1,6 @@
 node_modules/
 .wrangler/
 .dev.vars
+
+# local working notes
+CLAUDE.md
